@@ -10,92 +10,509 @@
             --primary: #0f172a;
             --accent: #25D366;
             --accent-hover: #1ebe5d;
-            --card: rgba(255, 255, 255, 0.96);
+            --card: #ffffff;
             --text: #1e293b;
             --muted: #64748b;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        
-        body { 
-            margin: 0; 
-            color: var(--text); 
-            padding: 20px 15px;
+        body {
+            margin: 0;
+            color: var(--text);
+            padding: 16px 12px;
             min-height: 100vh;
-            background: 
-                linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.82)),
+            background:
+                linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)),
                 url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1200&q=80') no-repeat center center fixed;
             background-size: cover;
         }
-
-        .container { 
-            max-width: 500px; 
-            margin: 0 auto; 
-            background: var(--card); 
-            border-radius: 20px; 
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); 
-            overflow: hidden; 
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: var(--card);
+            border-radius: 18px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
         }
-
-        header { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
-            color: white; 
-            padding: 24px 20px; 
-            text-align: center; 
+        header {
+            background: #0f172a;
+            color: white;
+            padding: 20px;
+            text-align: center;
             border-bottom: 3px solid var(--accent);
         }
-        header h1 { margin: 0; font-size: 1.6rem; letter-spacing: 0.5px; }
-        header p { margin: 6px 0 0; font-size: 0.85rem; color: #cbd5e1; }
+        header h1 { margin: 0; font-size: 1.5rem; }
+        header p { margin: 5px 0 0; font-size: 0.85rem; color: #cbd5e1; }
         .schedule-badge { display: inline-block; background: rgba(255,255,255,0.12); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; margin-top: 8px; color: #86efac; }
-        
-        .content { padding: 22px; }
-        .form-group { margin-bottom: 16px; position: relative; }
-        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
-        
+        .content { padding: 18px; }
+        .form-group { margin-bottom: 14px; position: relative; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: var(--text); }
         .input-with-btn { display: flex; gap: 8px; }
-        input[type="text"], input[type="datetime-local"], select { 
-            width: 100%; 
-            padding: 12px; 
-            border: 1.5px solid #cbd5e1; 
-            border-radius: 10px; 
-            font-size: 0.95rem; 
-            outline: none; 
+        input[type="text"], input[type="datetime-local"], select {
+            width: 100%;
+            padding: 11px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
             background: #ffffff;
-            transition: border 0.2s, box-shadow 0.2s;
         }
-        input:focus, select:focus { border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1); }
-        
-        .btn-gps { 
-            background: #2563eb; 
-            color: white; 
-            border: none; 
-            border-radius: 10px; 
-            padding: 0 14px; 
-            font-size: 0.82rem; 
-            font-weight: 600; 
-            cursor: pointer; 
+        input:focus, select:focus { border-color: #0f172a; }
+        .btn-gps {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
             white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: background 0.2s;
         }
-        .btn-gps:hover { background: #1d4ed8; }
-        .btn-gps:disabled { background: #94a3b8; cursor: not-allowed; }
-
-        .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 0 0 10px 10px; z-index: 1000; max-height: 180px; overflow-y: auto; box-shadow: 0 10px 15px rgba(0,0,0,0.1); display: none; }
-        .suggestion-item { padding: 10px 12px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
-        .suggestion-item:hover { background: #f8fafc; }
-        
-        #map { height: 200px; width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1.5px solid #cbd5e1; z-index: 1; }
-        .map-hint { font-size: 0.76rem; color: var(--muted); text-align: center; margin-top: -10px; margin-bottom: 16px; }
-        
-        .result-box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; padding: 15px; margin-bottom: 16px; display: none; }
-        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
-        .stat-val { font-size: 1.15rem; font-weight: 700; color: var(--primary); }
+        .btn-gps:disabled { background: #94a3b8; }
+        .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 0 0 10px 10px; z-index: 1000; max-height: 170px; overflow-y: auto; display: none; }
+        .suggestion-item { padding: 10px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        #map { height: 200px; width: 100%; border-radius: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; z-index: 1; }
+        .map-hint { font-size: 0.75rem; color: var(--muted); text-align: center; margin-bottom: 14px; }
+        .result-box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; margin-bottom: 14px; display: none; }
+        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+        .stat-val { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
         .stat-lbl { font-size: 0.75rem; color: var(--muted); }
-        .recommendation-box { background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px; border-radius: 8px; font-size: 0.86rem; margin-top: 12px; color: #1e3a8a; }
-        
-        .payment-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 15px; margin-bottom: 16px; display: none; }
-        .payment-title { font-weight: 700; font-size: 0.95rem; color: #92400e; margin-bottom: 8px; display: flex
+        .recommendation-box { background: #eff6ff; border-left: 4px solid #2563eb; padding: 11px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px; color: #1e3a8a; }
+        .payment-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 14px; margin-bottom: 14px; display: none; }
+        .payment-title { font-weight: 700; font-size: 0.92rem; color: #92400e; margin-bottom: 6px; }
+        .bank-details { background: white; padding: 10px; border-radius: 8px; font-size: 0.82rem; border: 1px solid #fde68a; line-height: 1.5; color: #374151; }
+        .btn-copy { background: #f59e0b; color: white; border: none; padding: 9px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; margin-top: 8px; width: 100%; }
+        .policy-notice { font-size: 0.78rem; color: #92400e; margin-top: 10px; background: #fef3c7; padding: 8px; border-radius: 6px; }
+        .checkbox-group { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 0.82rem; color: #1f2937; }
+        .checkbox-group input { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; }
+        .error-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 11px; border-radius: 8px; font-size: 0.84rem; margin-bottom: 14px; color: #991b1b; display: none; }
+        .btn-wsp { width: 100%; background: var(--accent); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+        .btn-wsp:hover { background: var(--accent-hover); }
+        .btn-wsp:disabled { background: #94a3b8; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🚖 DriverConce</h1>
+        <p>Cotiza, paga y reserva tu traslado en Concepción</p>
+        <div class="schedule-badge">🕒 Horario de atención: 07:00 a 21:00 hrs</div>
+    </header>
+
+    <div class="content">
+        <div class="form-group">
+            <label>📍 Punto de Recogida</label>
+            <div class="input-with-btn">
+                <input type="text" id="origin-input" placeholder="Escribe dirección o usa GPS..." autocomplete="off">
+                <button type="button" class="btn-gps" id="btn-gps">🎯 Mi GPS</button>
+            </div>
+            <div id="origin-suggestions" class="suggestions"></div>
+        </div>
+
+        <div class="form-group">
+            <label>🏁 Destino</label>
+            <input type="text" id="dest-input" placeholder="Ej: Aeropuerto Carriel Sur..." autocomplete="off">
+            <div id="dest-suggestions" class="suggestions"></div>
+        </div>
+
+        <div id="map"></div>
+        <div class="map-hint">💡 Toca "🎯 Mi GPS" o marca directamente en el mapa</div>
+
+        <div id="result-box" class="result-box">
+            <div class="result-grid">
+                <div>
+                    <div class="stat-val" id="res-dist">-</div>
+                    <div class="stat-lbl">Distancia</div>
+                </div>
+                <div>
+                    <div class="stat-val" id="res-time">-</div>
+                    <div class="stat-lbl">Tiempo est.</div>
+                </div>
+                <div>
+                    <div class="stat-val" id="res-price" style="color: #16a34a;">-</div>
+                    <div class="stat-lbl">Total Viaje</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>⏰ ¿Cómo deseas programar tu horario?</label>
+            <select id="time-mode">
+                <option value="arrive">Quiero llegar a una hora específica (Recomendado)</option>
+                <option value="depart">Quiero salir a una hora específica</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label id="time-label">Hora a la que necesitas llegar a destino:</label>
+            <input type="datetime-local" id="target-time">
+            <div id="recommendation-box" class="recommendation-box" style="display:none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label>👤 Tu Nombre</label>
+            <input type="text" id="client-name" placeholder="Escribe tu nombre">
+        </div>
+
+        <div id="error-box" class="error-box"></div>
+
+        <div id="payment-box" class="payment-box">
+            <div class="payment-title">💳 Pago previo para confirmar reserva</div>
+            <p style="font-size: 0.82rem; margin: 0 0 8px; color: #78350f;">
+                Para bloquear tu horario y evitar cancelaciones, transfiere <strong id="pay-amount-text">$0</strong> y adjunta el comprobante en WhatsApp:
+            </p>
+            <div class="bank-details" id="bank-info-display"></div>
+            <button type="button" class="btn-copy" id="btn-copy-bank">📋 Copiar datos de transferencia</button>
+
+            <div class="policy-notice">
+                ⚠️ <strong>Política de cancelación:</strong> Si cancelas una vez reservado, se retendrá un cargo fijo de <strong>$1.500 CLP</strong> por combustible y reserva de horario.
+            </div>
+
+            <label class="checkbox-group">
+                <input type="checkbox" id="accept-policy">
+                <span>Realicé (o realizaré ahora) el pago y acepto la retención de <strong>$1.500</strong> en caso de cancelación.</span>
+            </label>
+        </div>
+
+        <button id="btn-book" class="btn-wsp" disabled>
+            Enviar Comprobante y Reservar
+        </button>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const CONFIG = {
+        whatsappNumber: "56982519388",
+        valorKm: 850,
+        valorMinuto: 50,
+        tarifaMinima: 4000,
+        radioMinimoKm: 4,
+        retencionCancelacion: 1500,
+        anticipacionMinimaMin: 30,
+        colchonSeguridadMin: 15,
+        horaInicioServicio: 7,
+        horaFinServicio: 21,
+        margenEntreViajesMin: 30,
+        centroMapa: [-36.8270, -73.0503],
+        horariosOcupados: [],
+        datosBancarios: {
+            nombre: "DriverConce (Tu Nombre Completo)",
+            rut: "12.345.678-9",
+            banco: "BancoEstado",
+            tipoCuenta: "CuentaRUT / Vista",
+            numeroCuenta: "12345678",
+            correo: "pagos@driverconce.cl"
+        }
+    };
+
+    function getBlockedSlots() {
+        const localBooked = JSON.parse(localStorage.getItem('driverconce_booked') || '[]');
+        return CONFIG.horariosOcupados.concat(localBooked);
+    }
+
+    const b = CONFIG.datosBancarios;
+    document.getElementById('bank-info-display').innerHTML =
+        "<strong>Nombre:</strong> " + b.nombre + "<br>" +
+        "<strong>RUT:</strong> " + b.rut + "<br>" +
+        "<strong>Banco:</strong> " + b.banco + " (" + b.tipoCuenta + ")<br>" +
+        "<strong>N° Cuenta:</strong> " + b.numeroCuenta + "<br>" +
+        "<strong>Correo:</strong> " + b.correo;
+
+    document.getElementById('btn-copy-bank').addEventListener('click', function () {
+        const textToCopy = b.nombre + "\n" + b.rut + "\n" + b.banco + "\n" + b.tipoCuenta + "\n" + b.numeroCuenta + "\n" + b.correo;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy);
+        }
+        const btn = document.getElementById('btn-copy-bank');
+        btn.textContent = "✅ ¡Datos copiados!";
+        setTimeout(function () { btn.textContent = "📋 Copiar datos de transferencia"; }, 2500);
+    });
+
+    const map = L.map('map').setView(CONFIG.centroMapa, 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+    let originCoords = null;
+    let destCoords = null;
+    let originMarker = null;
+    let destMarker = null;
+    let routeLine = null;
+    let currentTrip = null;
+    let currentRecommendedPickup = null;
+
+    const nowPlus50 = new Date(Date.now() + 50 * 60000);
+    nowPlus50.setMinutes(nowPlus50.getMinutes() - nowPlus50.getTimezoneOffset());
+    document.getElementById('target-time').value = nowPlus50.toISOString().slice(0, 16);
+
+    document.getElementById('btn-gps').addEventListener('click', function () {
+        const btn = document.getElementById('btn-gps');
+        const errorBox = document.getElementById('error-box');
+        errorBox.style.display = 'none';
+
+        if (!navigator.geolocation) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "⚠️ Tu navegador no soporta GPS. Escribe tu dirección o toca el mapa.";
+            return;
+        }
+
+        btn.textContent = "⏳ Ubicando...";
+        btn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            async function (pos) {
+                const coords = [pos.coords.latitude, pos.coords.longitude];
+                setPoint(coords, true);
+                map.setView(coords, 16);
+
+                try {
+                    const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + coords[0] + "&lon=" + coords[1]);
+                    const data = await res.json();
+                    const shortName = data.display_name ? data.display_name.split(',').slice(0, 2).join(',') : "Mi ubicación actual (GPS)";
+                    document.getElementById('origin-input').value = shortName;
+                } catch (e) {
+                    document.getElementById('origin-input').value = "Mi ubicación actual (GPS)";
+                }
+
+                btn.textContent = "✅ Ubicado";
+                btn.disabled = false;
+                setTimeout(function () { btn.textContent = "🎯 Mi GPS"; }, 2000);
+            },
+            function (err) {
+                btn.textContent = "🎯 Mi GPS";
+                btn.disabled = false;
+                errorBox.style.display = 'block';
+                if (err.code === 1) {
+                    errorBox.innerHTML = "🔒 <strong>Permiso de GPS bloqueado:</strong> Activa Ubicación en los ajustes de tu navegador o celular.";
+                } else {
+                    errorBox.innerHTML = "📡 No se pudo obtener el GPS. Escribe tu calle o toca el mapa.";
+                }
+            },
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        );
+    });
+
+    function setupAutocomplete(inputId, suggestionsId, isOrigin) {
+        const input = document.getElementById(inputId);
+        const box = document.getElementById(suggestionsId);
+        let timeout = null;
+
+        input.addEventListener('input', function () {
+            clearTimeout(timeout);
+            const query = input.value.trim();
+            if (query.length < 3) { box.style.display = 'none'; return; }
+
+            timeout = setTimeout(async function () {
+                const url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(query + ", Biobio, Chile") + "&limit=5";
+                const res = await fetch(url);
+                const data = await res.json();
+
+                box.innerHTML = '';
+                if (data.length > 0) {
+                    box.style.display = 'block';
+                    data.forEach(function (place) {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = place.display_name.split(',').slice(0, 3).join(',');
+                        div.onclick = function () {
+                            input.value = div.textContent;
+                            box.style.display = 'none';
+                            setPoint([parseFloat(place.lat), parseFloat(place.lon)], isOrigin);
+                        };
+                        box.appendChild(div);
+                    });
+                } else {
+                    box.style.display = 'none';
+                }
+            }, 400);
+        });
+    }
+
+    setupAutocomplete('origin-input', 'origin-suggestions', true);
+    setupAutocomplete('dest-input', 'dest-suggestions', false);
+
+    map.on('click', async function (e) {
+        const coords = [e.latlng.lat, e.latlng.lng];
+        const isOrigin = !originCoords || (originCoords && destCoords);
+
+        if (isOrigin && destCoords) {
+            destCoords = null;
+            if (destMarker) map.removeLayer(destMarker);
+            if (routeLine) map.removeLayer(routeLine);
+            document.getElementById('dest-input').value = '';
+            document.getElementById('result-box').style.display = 'none';
+            document.getElementById('payment-box').style.display = 'none';
+            currentTrip = null;
+        }
+
+        setPoint(coords, isOrigin);
+        const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + coords[0] + "&lon=" + coords[1]);
+        const data = await res.json();
+        const shortName = data.display_name ? data.display_name.split(',').slice(0, 2).join(',') : coords[0].toFixed(4) + ", " + coords[1].toFixed(4);
+        document.getElementById(isOrigin ? 'origin-input' : 'dest-input').value = shortName;
+    });
+
+    function setPoint(coords, isOrigin) {
+        if (isOrigin) {
+            originCoords = coords;
+            if (originMarker) map.removeLayer(originMarker);
+            originMarker = L.marker(coords).addTo(map).bindPopup("Recogida").openPopup();
+        } else {
+            destCoords = coords;
+            if (destMarker) map.removeLayer(destMarker);
+            destMarker = L.marker(coords).addTo(map).bindPopup("Destino").openPopup();
+        }
+        map.panTo(coords);
+        if (originCoords && destCoords) calculateRoute();
+    }
+
+    async function calculateRoute() {
+        const url = "https://router.project-osrm.org/route/v1/driving/" + originCoords[1] + "," + originCoords[0] + ";" + destCoords[1] + "," + destCoords[0] + "?overview=full&geometries=geojson";
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const distKm = route.distance / 1000;
+            const durationMin = Math.ceil(route.duration / 60);
+
+            if (routeLine) map.removeLayer(routeLine);
+            routeLine = L.geoJSON(route.geometry, { style: { color: '#2563eb', weight: 5 } }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [25, 25] });
+
+            let price = 0;
+            if (distKm <= CONFIG.radioMinimoKm) {
+                price = CONFIG.tarifaMinima;
+            } else {
+                const calculated = (distKm * CONFIG.valorKm) + (durationMin * CONFIG.valorMinuto);
+                price = Math.max(CONFIG.tarifaMinima, Math.round(calculated / 100) * 100);
+            }
+
+            currentTrip = { distKm: distKm, durationMin: durationMin, price: price };
+
+            document.getElementById('res-dist').textContent = distKm.toFixed(1) + " km";
+            document.getElementById('res-time').textContent = durationMin + " min";
+            document.getElementById('res-price').textContent = "$" + price.toLocaleString('es-CL');
+            document.getElementById('pay-amount-text').textContent = "$" + price.toLocaleString('es-CL');
+            document.getElementById('result-box').style.display = 'block';
+
+            validateForm();
+        }
+    }
+
+    document.getElementById('time-mode').addEventListener('change', function (e) {
+        document.getElementById('time-label').textContent = e.target.value === 'arrive'
+            ? 'Hora a la que necesitas llegar a destino:'
+            : 'Hora a la que deseas que te pasemos a buscar:';
+        validateForm();
+    });
+
+    document.getElementById('target-time').addEventListener('change', validateForm);
+    document.getElementById('client-name').addEventListener('input', validateForm);
+    document.getElementById('accept-policy').addEventListener('change', validateForm);
+
+    function formatHour(date) {
+        return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function validateForm() {
+        const errorBox = document.getElementById('error-box');
+        const recBox = document.getElementById('recommendation-box');
+        const payBox = document.getElementById('payment-box');
+        const btnBook = document.getElementById('btn-book');
+        const policyAccepted = document.getElementById('accept-policy').checked;
+
+        errorBox.style.display = 'none';
+        recBox.style.display = 'none';
+        payBox.style.display = 'none';
+        btnBook.disabled = true;
+
+        if (!currentTrip) return;
+
+        const mode = document.getElementById('time-mode').value;
+        const selectedTime = new Date(document.getElementById('target-time').value);
+        const now = new Date();
+        const minAllowedPickup = new Date(now.getTime() + CONFIG.anticipacionMinimaMin * 60000);
+
+        let recommendedPickupTime;
+
+        if (mode === 'arrive') {
+            const totalOffsetMin = currentTrip.durationMin + CONFIG.colchonSeguridadMin;
+            recommendedPickupTime = new Date(selectedTime.getTime() - totalOffsetMin * 60000);
+            recBox.style.display = 'block';
+            recBox.innerHTML = "💡 <strong>Recomendación DriverConce:</strong> Como el viaje dura aprox. <strong>" + currentTrip.durationMin + " min</strong>, te sugerimos salir a las <strong>" + formatHour(recommendedPickupTime) + "</strong> (incluye " + CONFIG.colchonSeguridadMin + " min de holgura para no correr).";
+        } else {
+            recommendedPickupTime = selectedTime;
+            const estimatedArrival = new Date(selectedTime.getTime() + currentTrip.durationMin * 60000);
+            recBox.style.display = 'block';
+            recBox.innerHTML = "🕒 Saliendo a las <strong>" + formatHour(recommendedPickupTime) + "</strong>, llegarás a destino aprox. a las <strong>" + formatHour(estimatedArrival) + "</strong>.";
+        }
+
+        if (recommendedPickupTime < minAllowedPickup) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "⚠️ Las reservas requieren al menos <strong>" + CONFIG.anticipacionMinimaMin + " minutos de anticipación</strong>. La hora más próxima disponible es a las <strong>" + formatHour(minAllowedPickup) + "</strong>.";
+            return;
+        }
+
+        const pickupHour = recommendedPickupTime.getHours();
+        const pickupMinutes = recommendedPickupTime.getMinutes();
+        if (pickupHour < CONFIG.horaInicioServicio || pickupHour > CONFIG.horaFinServicio || (pickupHour === CONFIG.horaFinServicio && pickupMinutes > 0)) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "🌙 Nuestro horario de servicio es de <strong>07:00 AM a 21:00 PM</strong>. La hora calculada (" + formatHour(recommendedPickupTime) + ") está fuera de horario.";
+            return;
+        }
+
+        const blockedSlots = getBlockedSlots();
+        const isConflict = blockedSlots.some(function (slotStr) {
+            const bookedTime = new Date(slotStr.replace(' ', 'T'));
+            const diffMin = Math.abs(recommendedPickupTime - bookedTime) / 60000;
+            return diffMin < CONFIG.margenEntreViajesMin;
+        });
+
+        if (isConflict) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "🚫 Ese horario (<strong>" + formatHour(recommendedPickupTime) + "</strong>) ya está reservado. Elige otro con al menos " + CONFIG.margenEntreViajesMin + " min de diferencia.";
+            return;
+        }
+
+        currentRecommendedPickup = recommendedPickupTime;
+        payBox.style.display = 'block';
+
+        if (policyAccepted) {
+            btnBook.disabled = false;
+            btnBook.dataset.pickup = recommendedPickupTime.toLocaleDateString('es-CL') + " a las " + formatHour(recommendedPickupTime);
+        }
+    }
+
+    document.getElementById('btn-book').addEventListener('click', function () {
+        const origin = document.getElementById('origin-input').value;
+        const dest = document.getElementById('dest-input').value;
+        const name = document.getElementById('client-name').value.trim() || 'Cliente';
+        const pickup = document.getElementById('btn-book').dataset.pickup;
+
+        if (currentRecommendedPickup) {
+            const localBooked = JSON.parse(localStorage.getItem('driverconce_booked') || '[]');
+            localBooked.push(currentRecommendedPickup.toISOString());
+            localStorage.setItem('driverconce_booked', JSON.stringify(localBooked));
+        }
+
+        const gpsLink = originCoords ? "https://maps.google.com/?q=" + originCoords[0] + "," + originCoords[1] : "";
+
+        const msg = "Hola *DriverConce* 👋, quiero confirmar mi reserva:\n\n" +
+                    "👤 *Nombre:* " + name + "\n" +
+                    "📍 *Recogida:* " + origin + "\n" +
+                    (gpsLink ? "🗺️ *Pin GPS:* " + gpsLink + "\n" : "") +
+                    "🏁 *Destino:* " + dest + "\n" +
+                    "⏰ *Hora de salida:* " + pickup + "\n" +
+                    "📏 *Distancia / Tiempo:* " + currentTrip.distKm.toFixed(1) + " km (" + currentTrip.durationMin + " min)\n" +
+                    "💰 *Total a pagar:* $" + currentTrip.price.toLocaleString('es-CL') + "\n" +
+                    "✅ *Condiciones:* Acepto la retención de $" + CONFIG.retencionCancelacion.toLocaleString('es-CL') + " por combustible en caso de cancelar.\n\n" +
+                    "📎 *Aquí adjunto mi comprobante de transferencia:*";
+
+        const whatsappUrl = "https://wa.me/" + CONFIG.whatsappNumber + "?text=" + encodeURIComponent(msg);
+        window.open(whatsappUrl, '_blank');
+    });
+</script>
+
+</body>
+</html>
