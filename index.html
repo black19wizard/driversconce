@@ -71,7 +71,7 @@
         .btn-gps:disabled { background: #94a3b8; }
         .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 0 0 10px 10px; z-index: 1000; max-height: 170px; overflow-y: auto; display: none; }
         .suggestion-item { padding: 10px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
-        #map { height: 200px; width: 100%; border-radius: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; z-index: 1; }
+        #map { height: 220px; width: 100%; border-radius: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; z-index: 1; }
         .map-hint { font-size: 0.75rem; color: var(--muted); text-align: center; margin-bottom: 14px; }
         .result-box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; margin-bottom: 14px; display: none; }
         .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
@@ -96,7 +96,7 @@
 <div class="container">
     <header>
         <h1>🚖 DriverConce</h1>
-        <p>Cotiza, paga y reserva tu traslado en Concepción</p>
+        <p>Cotiza, paga y reserva tu traslado en todo Chile</p>
         <div class="schedule-badge">🕒 Horario de atención: 07:00 a 21:00 hrs</div>
     </header>
 
@@ -104,7 +104,7 @@
         <div class="form-group">
             <label>📍 Punto de Recogida</label>
             <div class="input-with-btn">
-                <input type="text" id="origin-input" placeholder="Escribe dirección o usa GPS..." autocomplete="off">
+                <input type="text" id="origin-input" placeholder="Escribe ciudad o dirección en Chile..." autocomplete="off">
                 <button type="button" class="btn-gps" id="btn-gps">🎯 Mi GPS</button>
             </div>
             <div id="origin-suggestions" class="suggestions"></div>
@@ -112,12 +112,12 @@
 
         <div class="form-group">
             <label>🏁 Destino</label>
-            <input type="text" id="dest-input" placeholder="Ej: Aeropuerto Carriel Sur..." autocomplete="off">
+            <input type="text" id="dest-input" placeholder="Ej: Santiago, Chillán, Temuco..." autocomplete="off">
             <div id="dest-suggestions" class="suggestions"></div>
         </div>
 
         <div id="map"></div>
-        <div class="map-hint">💡 Toca "🎯 Mi GPS" o marca directamente en el mapa</div>
+        <div class="map-hint">💡 Toca "🎯 Mi GPS" o marca cualquier punto del mapa en Chile</div>
 
         <div id="result-box" class="result-box">
             <div class="result-grid">
@@ -195,7 +195,9 @@
         horaInicioServicio: 7,
         horaFinServicio: 21,
         margenEntreViajesMin: 30,
-        centroMapa: [-36.8270, -73.0503],
+        // Vista nacional centrada en Chile (zoom 5)
+        centroMapa: [-33.4489, -70.6693],
+        zoomInicial: 5,
         horariosOcupados: [],
         datosBancarios: {
             nombre: "DriverConce (Tu Nombre Completo)",
@@ -230,7 +232,7 @@
         setTimeout(function () { btn.textContent = "📋 Copiar datos de transferencia"; }, 2500);
     });
 
-    const map = L.map('map').setView(CONFIG.centroMapa, 13);
+    const map = L.map('map').setView(CONFIG.centroMapa, CONFIG.zoomInicial);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
     let originCoords = null;
@@ -263,12 +265,12 @@
             async function (pos) {
                 const coords = [pos.coords.latitude, pos.coords.longitude];
                 setPoint(coords, true);
-                map.setView(coords, 16);
+                map.setView(coords, 15);
 
                 try {
                     const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + coords[0] + "&lon=" + coords[1]);
                     const data = await res.json();
-                    const shortName = data.display_name ? data.display_name.split(',').slice(0, 2).join(',') : "Mi ubicación actual (GPS)";
+                    const shortName = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : "Mi ubicación actual (GPS)";
                     document.getElementById('origin-input').value = shortName;
                 } catch (e) {
                     document.getElementById('origin-input').value = "Mi ubicación actual (GPS)";
@@ -303,7 +305,8 @@
             if (query.length < 3) { box.style.display = 'none'; return; }
 
             timeout = setTimeout(async function () {
-                const url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(query + ", Biobio, Chile") + "&limit=5";
+                // Búsqueda a nivel nacional en todo Chile
+                const url = "https://nominatim.openstreetmap.org/search?format=json&countrycodes=cl&q=" + encodeURIComponent(query) + "&limit=5";
                 const res = await fetch(url);
                 const data = await res.json();
 
@@ -348,7 +351,7 @@
         setPoint(coords, isOrigin);
         const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + coords[0] + "&lon=" + coords[1]);
         const data = await res.json();
-        const shortName = data.display_name ? data.display_name.split(',').slice(0, 2).join(',') : coords[0].toFixed(4) + ", " + coords[1].toFixed(4);
+        const shortName = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : coords[0].toFixed(4) + ", " + coords[1].toFixed(4);
         document.getElementById(isOrigin ? 'origin-input' : 'dest-input').value = shortName;
     });
 
