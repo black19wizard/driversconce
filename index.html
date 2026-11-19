@@ -77,6 +77,7 @@
         .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
         .stat-val { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
         .stat-lbl { font-size: 0.75rem; color: var(--muted); }
+        .traffic-note { font-size: 0.76rem; color: #b45309; background: #fef3c7; padding: 6px 10px; border-radius: 8px; margin-top: 10px; display: none; text-align: center; }
         .recommendation-box { background: #eff6ff; border-left: 4px solid #2563eb; padding: 11px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px; color: #1e3a8a; }
         .payment-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 14px; margin-bottom: 14px; display: none; }
         .payment-title { font-weight: 700; font-size: 0.92rem; color: #92400e; margin-bottom: 6px; }
@@ -134,6 +135,7 @@
                     <div class="stat-lbl">Total Viaje</div>
                 </div>
             </div>
+            <div id="traffic-note" class="traffic-note"></div>
         </div>
 
         <div class="form-group">
@@ -195,7 +197,7 @@
         horaInicioServicio: 7,
         horaFinServicio: 21,
         margenEntreViajesMin: 30,
-        // Vista nacional centrada en Chile (zoom 5)
+        factorHoraPunta: 1.25,
         centroMapa: [-33.4489, -70.6693],
         zoomInicial: 5,
         horariosOcupados: [],
@@ -208,6 +210,64 @@
             correo: "pagos@driverconce.cl"
         }
     };
+
+    let rawRouteData = null;
+
+    function toLocalInputValue(date) {
+        const copy = new Date(date.getTime());
+        copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
+        return copy.toISOString().slice(0, 16);
+    }
+
+    function getMinimumValidPickupDate() {
+        const now = new Date();
+        let minPickup = new Date(now.getTime() + CONFIG.anticipacionMinimaMin * 60000);
+
+        const hour = minPickup.getHours();
+        const minutes = minPickup.getMinutes();
+
+        if (hour < CONFIG.horaInicioServicio) {
+            minPickup.setHours(CONFIG.horaInicioServicio, 0, 0, 0);
+        } else if (hour > CONFIG.horaFinServicio || (hour === CONFIG.horaFinServicio && minutes > 0)) {
+            minPickup.setDate(minPickup.getDate() + 1);
+            minPickup.setHours(CONFIG.horaInicioServicio, 0, 0, 0);
+        }
+
+        return minPickup;
+    }
+
+    function syncInputMinimums(baseDurationMin) {
+        const input = document.getElementById('target-time');
+        const mode = document.getElementById('time-mode').value;
+        const minPickup = getMinimumValidPickupDate();
+        const durationToUse = baseDurationMin || 0;
+
+        const minSelectableDate = mode === 'arrive'
+            ? new Date(minPickup.getTime() + (durationToUse + CONFIG.colchonSeguridadMin) * 60000)
+            : minPickup;
+
+        input.min = toLocalInputValue(minSelectableDate);
+
+        const currentVal = new Date(input.value);
+        if (!input.value || isNaN(currentVal.getTime()) || currentVal < minSelectableDate) {
+            input.value = toLocalInputValue(minSelectableDate);
+        }
+    }
+
+    function isRushHour(date) {
+        const day = date.getDay();
+        const isWeekday = day >= 1 && day <= 5;
+        if (!isWeekday) return false;
+
+        const totalMinutes = date.getHours() * 60 + date.getMinutes();
+        const morningStart = 7 * 60 + 30;  // 07:30
+        const morningEnd = 9 * 60 + 30;    // 09:30
+        const eveningStart = 17 * 60 + 30; // 17:30
+        const eveningEnd = 19 * 60 + 30;   // 19:30
+
+        return (totalMinutes >= morningStart && totalMinutes <= morningEnd) ||
+               (totalMinutes >= eveningStart && totalMinutes <= eveningEnd);
+    }
 
     function getBlockedSlots() {
         const localBooked = JSON.parse(localStorage.getItem('driverconce_booked') || '[]');
@@ -243,9 +303,7 @@
     let currentTrip = null;
     let currentRecommendedPickup = null;
 
-    const nowPlus50 = new Date(Date.now() + 50 * 60000);
-    nowPlus50.setMinutes(nowPlus50.getMinutes() - nowPlus50.getTimezoneOffset());
-    document.getElementById('target-time').value = nowPlus50.toISOString().slice(0, 16);
+    syncInputMinimums(0);
 
     document.getElementById('btn-gps').addEventListener('click', function () {
         const btn = document.getElementById('btn-gps');
@@ -305,7 +363,6 @@
             if (query.length < 3) { box.style.display = 'none'; return; }
 
             timeout = setTimeout(async function () {
-                // Búsqueda a nivel nacional en todo Chile
                 const url = "https://nominatim.openstreetmap.org/search?format=json&countrycodes=cl&q=" + encodeURIComponent(query) + "&limit=5";
                 const res = await fetch(url);
                 const data = await res.json();
@@ -345,177 +402,11 @@
             document.getElementById('dest-input').value = '';
             document.getElementById('result-box').style.display = 'none';
             document.getElementById('payment-box').style.display = 'none';
+            rawRouteData = null;
             currentTrip = null;
         }
 
         setPoint(coords, isOrigin);
         const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + coords[0] + "&lon=" + coords[1]);
         const data = await res.json();
-        const shortName = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : coords[0].toFixed(4) + ", " + coords[1].toFixed(4);
-        document.getElementById(isOrigin ? 'origin-input' : 'dest-input').value = shortName;
-    });
-
-    function setPoint(coords, isOrigin) {
-        if (isOrigin) {
-            originCoords = coords;
-            if (originMarker) map.removeLayer(originMarker);
-            originMarker = L.marker(coords).addTo(map).bindPopup("Recogida").openPopup();
-        } else {
-            destCoords = coords;
-            if (destMarker) map.removeLayer(destMarker);
-            destMarker = L.marker(coords).addTo(map).bindPopup("Destino").openPopup();
-        }
-        map.panTo(coords);
-        if (originCoords && destCoords) calculateRoute();
-    }
-
-    async function calculateRoute() {
-        const url = "https://router.project-osrm.org/route/v1/driving/" + originCoords[1] + "," + originCoords[0] + ";" + destCoords[1] + "," + destCoords[0] + "?overview=full&geometries=geojson";
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
-            const distKm = route.distance / 1000;
-            const durationMin = Math.ceil(route.duration / 60);
-
-            if (routeLine) map.removeLayer(routeLine);
-            routeLine = L.geoJSON(route.geometry, { style: { color: '#2563eb', weight: 5 } }).addTo(map);
-            map.fitBounds(routeLine.getBounds(), { padding: [25, 25] });
-
-            let price = 0;
-            if (distKm <= CONFIG.radioMinimoKm) {
-                price = CONFIG.tarifaMinima;
-            } else {
-                const calculated = (distKm * CONFIG.valorKm) + (durationMin * CONFIG.valorMinuto);
-                price = Math.max(CONFIG.tarifaMinima, Math.round(calculated / 100) * 100);
-            }
-
-            currentTrip = { distKm: distKm, durationMin: durationMin, price: price };
-
-            document.getElementById('res-dist').textContent = distKm.toFixed(1) + " km";
-            document.getElementById('res-time').textContent = durationMin + " min";
-            document.getElementById('res-price').textContent = "$" + price.toLocaleString('es-CL');
-            document.getElementById('pay-amount-text').textContent = "$" + price.toLocaleString('es-CL');
-            document.getElementById('result-box').style.display = 'block';
-
-            validateForm();
-        }
-    }
-
-    document.getElementById('time-mode').addEventListener('change', function (e) {
-        document.getElementById('time-label').textContent = e.target.value === 'arrive'
-            ? 'Hora a la que necesitas llegar a destino:'
-            : 'Hora a la que deseas que te pasemos a buscar:';
-        validateForm();
-    });
-
-    document.getElementById('target-time').addEventListener('change', validateForm);
-    document.getElementById('client-name').addEventListener('input', validateForm);
-    document.getElementById('accept-policy').addEventListener('change', validateForm);
-
-    function formatHour(date) {
-        return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    function validateForm() {
-        const errorBox = document.getElementById('error-box');
-        const recBox = document.getElementById('recommendation-box');
-        const payBox = document.getElementById('payment-box');
-        const btnBook = document.getElementById('btn-book');
-        const policyAccepted = document.getElementById('accept-policy').checked;
-
-        errorBox.style.display = 'none';
-        recBox.style.display = 'none';
-        payBox.style.display = 'none';
-        btnBook.disabled = true;
-
-        if (!currentTrip) return;
-
-        const mode = document.getElementById('time-mode').value;
-        const selectedTime = new Date(document.getElementById('target-time').value);
-        const now = new Date();
-        const minAllowedPickup = new Date(now.getTime() + CONFIG.anticipacionMinimaMin * 60000);
-
-        let recommendedPickupTime;
-
-        if (mode === 'arrive') {
-            const totalOffsetMin = currentTrip.durationMin + CONFIG.colchonSeguridadMin;
-            recommendedPickupTime = new Date(selectedTime.getTime() - totalOffsetMin * 60000);
-            recBox.style.display = 'block';
-            recBox.innerHTML = "💡 <strong>Recomendación DriverConce:</strong> Como el viaje dura aprox. <strong>" + currentTrip.durationMin + " min</strong>, te sugerimos salir a las <strong>" + formatHour(recommendedPickupTime) + "</strong> (incluye " + CONFIG.colchonSeguridadMin + " min de holgura para no correr).";
-        } else {
-            recommendedPickupTime = selectedTime;
-            const estimatedArrival = new Date(selectedTime.getTime() + currentTrip.durationMin * 60000);
-            recBox.style.display = 'block';
-            recBox.innerHTML = "🕒 Saliendo a las <strong>" + formatHour(recommendedPickupTime) + "</strong>, llegarás a destino aprox. a las <strong>" + formatHour(estimatedArrival) + "</strong>.";
-        }
-
-        if (recommendedPickupTime < minAllowedPickup) {
-            errorBox.style.display = 'block';
-            errorBox.innerHTML = "⚠️ Las reservas requieren al menos <strong>" + CONFIG.anticipacionMinimaMin + " minutos de anticipación</strong>. La hora más próxima disponible es a las <strong>" + formatHour(minAllowedPickup) + "</strong>.";
-            return;
-        }
-
-        const pickupHour = recommendedPickupTime.getHours();
-        const pickupMinutes = recommendedPickupTime.getMinutes();
-        if (pickupHour < CONFIG.horaInicioServicio || pickupHour > CONFIG.horaFinServicio || (pickupHour === CONFIG.horaFinServicio && pickupMinutes > 0)) {
-            errorBox.style.display = 'block';
-            errorBox.innerHTML = "🌙 Nuestro horario de servicio es de <strong>07:00 AM a 21:00 PM</strong>. La hora calculada (" + formatHour(recommendedPickupTime) + ") está fuera de horario.";
-            return;
-        }
-
-        const blockedSlots = getBlockedSlots();
-        const isConflict = blockedSlots.some(function (slotStr) {
-            const bookedTime = new Date(slotStr.replace(' ', 'T'));
-            const diffMin = Math.abs(recommendedPickupTime - bookedTime) / 60000;
-            return diffMin < CONFIG.margenEntreViajesMin;
-        });
-
-        if (isConflict) {
-            errorBox.style.display = 'block';
-            errorBox.innerHTML = "🚫 Ese horario (<strong>" + formatHour(recommendedPickupTime) + "</strong>) ya está reservado. Elige otro con al menos " + CONFIG.margenEntreViajesMin + " min de diferencia.";
-            return;
-        }
-
-        currentRecommendedPickup = recommendedPickupTime;
-        payBox.style.display = 'block';
-
-        if (policyAccepted) {
-            btnBook.disabled = false;
-            btnBook.dataset.pickup = recommendedPickupTime.toLocaleDateString('es-CL') + " a las " + formatHour(recommendedPickupTime);
-        }
-    }
-
-    document.getElementById('btn-book').addEventListener('click', function () {
-        const origin = document.getElementById('origin-input').value;
-        const dest = document.getElementById('dest-input').value;
-        const name = document.getElementById('client-name').value.trim() || 'Cliente';
-        const pickup = document.getElementById('btn-book').dataset.pickup;
-
-        if (currentRecommendedPickup) {
-            const localBooked = JSON.parse(localStorage.getItem('driverconce_booked') || '[]');
-            localBooked.push(currentRecommendedPickup.toISOString());
-            localStorage.setItem('driverconce_booked', JSON.stringify(localBooked));
-        }
-
-        const gpsLink = originCoords ? "https://maps.google.com/?q=" + originCoords[0] + "," + originCoords[1] : "";
-
-        const msg = "Hola *DriverConce* 👋, quiero confirmar mi reserva:\n\n" +
-                    "👤 *Nombre:* " + name + "\n" +
-                    "📍 *Recogida:* " + origin + "\n" +
-                    (gpsLink ? "🗺️ *Pin GPS:* " + gpsLink + "\n" : "") +
-                    "🏁 *Destino:* " + dest + "\n" +
-                    "⏰ *Hora de salida:* " + pickup + "\n" +
-                    "📏 *Distancia / Tiempo:* " + currentTrip.distKm.toFixed(1) + " km (" + currentTrip.durationMin + " min)\n" +
-                    "💰 *Total a pagar:* $" + currentTrip.price.toLocaleString('es-CL') + "\n" +
-                    "✅ *Condiciones:* Acepto la retención de $" + CONFIG.retencionCancelacion.toLocaleString('es-CL') + " por combustible en caso de cancelar.\n\n" +
-                    "📎 *Aquí adjunto mi comprobante de transferencia:*";
-
-        const whatsappUrl = "https://wa.me/" + CONFIG.whatsappNumber + "?text=" + encodeURIComponent(msg);
-        window.open(whatsappUrl, '_blank');
-    });
-</script>
-
-</body>
-</html>
+        const shortName = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : coords
