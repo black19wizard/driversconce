@@ -69,8 +69,9 @@
             white-space: nowrap;
         }
         .btn-gps:disabled { background: #94a3b8; }
-        .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 0 0 10px 10px; z-index: 1000; max-height: 170px; overflow-y: auto; display: none; }
+        .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 0 0 10px 10px; z-index: 1000; max-height: 190px; overflow-y: auto; display: none; }
         .suggestion-item { padding: 10px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .suggestion-item:hover { background: #f8fafc; }
         #map { height: 220px; width: 100%; border-radius: 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; z-index: 1; }
         .map-hint { font-size: 0.75rem; color: var(--muted); text-align: center; margin-bottom: 14px; }
         .result-box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; margin-bottom: 14px; display: none; }
@@ -98,7 +99,7 @@
 <div class="container">
     <header>
         <h1>🚖 DriverConce</h1>
-        <p>Cotiza, paga y reserva tu traslado en todo Chile</p>
+        <p>Concepción y alrededores · Cobertura en todo Chile</p>
         <div class="schedule-badge">🕒 Horario de atención: 07:00 a 21:00 hrs</div>
     </header>
 
@@ -106,7 +107,7 @@
         <div class="form-group">
             <label>📍 Punto de Recogida</label>
             <div class="input-with-btn">
-                <input type="text" id="origin-input" placeholder="Escribe ciudad o dirección en Chile..." autocomplete="off">
+                <input type="text" id="origin-input" placeholder="Ej: Centro, San Pedro, o cualquier ciudad..." autocomplete="off">
                 <button type="button" class="btn-gps" id="btn-gps">🎯 Mi GPS</button>
             </div>
             <div id="origin-suggestions" class="suggestions"></div>
@@ -114,12 +115,12 @@
 
         <div class="form-group">
             <label>🏁 Destino</label>
-            <input type="text" id="dest-input" placeholder="Ej: Santiago, Chillán, Temuco..." autocomplete="off">
+            <input type="text" id="dest-input" placeholder="Ej: Aeropuerto Carriel Sur, Chillán, Santiago..." autocomplete="off">
             <div id="dest-suggestions" class="suggestions"></div>
         </div>
 
         <div id="map"></div>
-        <div class="map-hint">💡 Toca "🎯 Mi GPS" o marca cualquier punto del mapa en Chile</div>
+        <div class="map-hint">💡 Prioridad Concepción y alrededores · También puedes buscar o marcar en todo Chile</div>
 
         <div id="result-box" class="result-box">
             <div class="result-grid">
@@ -200,8 +201,12 @@
         horaFinServicio: 21,
         margenEntreViajesMin: 30,
         factorHoraPunta: 1.25,
-        centroMapa: [-33.4489, -70.6693],
-        zoomInicial: 5,
+        // Prioridad visual y de búsqueda en Concepción y alrededores
+        centroMapa: [-36.8270, -73.0503],
+        zoomInicial: 12,
+        // Cuadro de prioridad Gran Concepción y alrededores (lonMin, latMax, lonMax, latMin)
+        viewboxConce: "-73.35,-36.60,-72.70,-37.10",
+        localZones: ["concepción", "concepcion", "talcahuano", "hualpén", "hualpen", "san pedro de la paz", "chiguayante", "coronel", "lota", "penco", "tomé", "tome", "hualqui", "biobío", "bio bio", "carriel sur"],
         horariosOcupados: [],
         datosBancarios: {
             nombre: "DriverConce (Tu Nombre Completo)",
@@ -372,6 +377,14 @@
         );
     });
 
+    function scoreLocalPriority(place) {
+        const text = (place.display_name || "").toLowerCase();
+        const isLocal = CONFIG.localZones.some(function (zone) {
+            return text.indexOf(zone) !== -1;
+        });
+        return isLocal ? 0 : 1;
+    }
+
     function setupAutocomplete(inputId, suggestionsId, isOrigin) {
         const input = document.getElementById(inputId);
         const box = document.getElementById(suggestionsId);
@@ -383,19 +396,31 @@
             if (query.length < 3) { box.style.display = 'none'; return; }
 
             timeout = setTimeout(async function () {
-                const url = "https://nominatim.openstreetmap.org/search?format=json&countrycodes=cl&q=" + encodeURIComponent(query) + "&limit=5";
+                // Prioriza Concepción y alrededores (bounded=0 permite buscar en todo Chile)
+                const url = "https://nominatim.openstreetmap.org/search?format=json&countrycodes=cl&viewbox=" +
+                            encodeURIComponent(CONFIG.viewboxConce) + "&bounded=0&q=" +
+                            encodeURIComponent(query) + "&limit=7";
                 const res = await fetch(url);
                 const data = await res.json();
+
+                // Ordenar poniendo primero los resultados de Concepción y alrededores
+                data.sort(function (a, b) {
+                    return scoreLocalPriority(a) - scoreLocalPriority(b);
+                });
 
                 box.innerHTML = '';
                 if (data.length > 0) {
                     box.style.display = 'block';
-                    data.forEach(function (place) {
+                    data.slice(0, 5).forEach(function (place) {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
-                        div.textContent = place.display_name.split(',').slice(0, 3).join(',');
+                        const shortLabel = place.display_name.split(',').slice(0, 3).join(',');
+                        const isLocal = scoreLocalPriority(place) === 0;
+                        div.innerHTML = isLocal
+                            ? "📍 " + shortLabel + " <span style='color:#2563eb;font-size:0.75rem;font-weight:600;'>(Concepción/alrededores)</span>"
+                            : "🇨🇱 " + shortLabel;
                         div.onclick = function () {
-                            input.value = div.textContent;
+                            input.value = shortLabel;
                             box.style.display = 'none';
                             setPoint([parseFloat(place.lat), parseFloat(place.lon)], isOrigin);
                         };
@@ -404,7 +429,7 @@
                 } else {
                     box.style.display = 'none';
                 }
-            }, 400);
+            }, 350);
         });
     }
 
@@ -516,7 +541,6 @@
             ? Math.ceil(rawRouteData.baseDurationMin * CONFIG.factorHoraPunta)
             : rawRouteData.baseDurationMin;
 
-        // Si al aplicar hora punta la hora de llegada queda menor al mínimo real, reajustar
         const minSelectableWithRush = getMinimumSelectableDate(adjustedDurationMin);
         let finalTargetTime = selectedTime;
         if (mode === 'arrive' && selectedTime < minSelectableWithRush) {
