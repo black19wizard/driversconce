@@ -1,5 +1,4 @@
-
-      <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -165,4 +164,690 @@
         .policy-notice { font-size: 0.78rem; color: #92400e; margin-top: 10px; background: #fef3c7; padding: 8px; border-radius: 6px; }
         .checkbox-group { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 0.82rem; color: #1f2937; }
         .checkbox-group input { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; }
-        .error-box { background: #fef2f2; border-left: 4px
+        .error-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 11px; border-radius: 8px; font-size: 0.84rem; margin-bottom: 14px; color: #991b1b; display: none; }
+        .btn-wsp { width: 100%; background: var(--accent); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+        .btn-wsp:hover { background: var(--accent-hover); }
+        .btn-wsp:disabled { background: #94a3b8; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🚖 DriverConce</h1>
+        <p>Concepción y alrededores · Cobertura en todo Chile</p>
+        <div class="schedule-badge">🕒 Horario de atención: 07:00 a 21:00 hrs</div>
+    </header>
+
+    <div class="vehicle-card">
+        <div class="vehicle-info">
+            <div class="vehicle-icon">🚘</div>
+            <div>
+                <div class="vehicle-model" id="vehicle-model-display">Vehículo DriverConce</div>
+                <div class="vehicle-sub" id="vehicle-color-display">Traslado privado verificado</div>
+            </div>
+        </div>
+        <div class="plate-badge" id="vehicle-plate-display">ABCD·12</div>
+    </div>
+
+    <div class="content">
+        <div class="form-group">
+            <label>📍 Punto de Recogida</label>
+            <div class="input-with-btn">
+                <input type="text" id="origin-input" placeholder="Ej: Centro, San Pedro, o cualquier ciudad..." autocomplete="off">
+                <button type="button" class="btn-gps" id="btn-gps">🎯 Mi GPS</button>
+            </div>
+            <div id="origin-suggestions" class="suggestions"></div>
+        </div>
+
+        <div id="destinations-container"></div>
+
+        <button type="button" class="btn-add-dest" id="btn-add-dest">
+            ➕ Agregar otro destino / parada (1 de 4)
+        </button>
+
+        <div id="map"></div>
+        <div class="map-hint">💡 Prioridad Concepción y alrededores · Puedes agregar hasta 4 destinos</div>
+
+        <div id="result-box" class="result-box">
+            <div class="result-grid">
+                <div>
+                    <div class="stat-val" id="res-dist">-</div>
+                    <div class="stat-lbl">Distancia total</div>
+                </div>
+                <div>
+                    <div class="stat-val" id="res-time">-</div>
+                    <div class="stat-lbl">Tiempo est.</div>
+                </div>
+                <div>
+                    <div class="stat-val" id="res-price" style="color: #16a34a;">-</div>
+                    <div class="stat-lbl">Total Viaje</div>
+                </div>
+            </div>
+            <div id="traffic-note" class="traffic-note"></div>
+        </div>
+
+        <div class="form-group">
+            <label>⏰ ¿Cómo deseas programar tu horario?</label>
+            <select id="time-mode">
+                <option value="arrive">Quiero llegar a una hora específica (Recomendado)</option>
+                <option value="depart">Quiero salir a una hora específica</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label id="time-label">Hora a la que necesitas llegar al destino final:</label>
+            <input type="datetime-local" id="target-time">
+            <div id="auto-adjust-note" class="auto-adjust-note"></div>
+            <div id="recommendation-box" class="recommendation-box" style="display:none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label>👤 Tu Nombre</label>
+            <input type="text" id="client-name" placeholder="Escribe tu nombre">
+        </div>
+
+        <div id="error-box" class="error-box"></div>
+
+        <div id="payment-box" class="payment-box">
+            <div class="payment-title">💳 Pago previo para confirmar reserva</div>
+            <p style="font-size: 0.82rem; margin: 0 0 8px; color: #78350f;">
+                Para bloquear tu horario y evitar cancelaciones, transfiere <strong id="pay-amount-text">$0</strong> y adjunta el comprobante en WhatsApp:
+            </p>
+            <div class="bank-details" id="bank-info-display"></div>
+            <button type="button" class="btn-copy" id="btn-copy-bank">📋 Copiar datos de transferencia</button>
+
+            <div class="policy-notice">
+                ⚠️ <strong>Política de cancelación:</strong> Si cancelas una vez reservado, se retendrá un cargo fijo de <strong>$1.500 CLP</strong> por combustible y reserva de horario.
+            </div>
+
+            <label class="checkbox-group">
+                <input type="checkbox" id="accept-policy">
+                <span>Realicé (o realizaré ahora) el pago y acepto la retención de <strong>$1.500</strong> en caso de cancelación.</span>
+            </label>
+        </div>
+
+        <button id="btn-book" class="btn-wsp" disabled>
+            Enviar Comprobante y Reservar
+        </button>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const CONFIG = {
+        whatsappNumber: "56982519388",
+        valorKm: 850,
+        valorMinuto: 50,
+        tarifaMinima: 4000,
+        radioMinimoKm: 4,
+        retencionCancelacion: 1500,
+        anticipacionMinimaMin: 30,
+        colchonSeguridadMin: 15,
+        horaInicioServicio: 7,
+        horaFinServicio: 21,
+        margenEntreViajesMin: 30,
+        factorHoraPunta: 1.25,
+        maxDestinos: 4,
+        vehiculo: {
+            modelo: "Sedán DriverConce (Edita tu modelo aquí)",
+            color: "Color Gris · Aire Acondicionado",
+            patente: "ABCD·12"
+        },
+        centroMapa: [-36.8270, -73.0503],
+        zoomInicial: 12,
+        viewboxConce: "-73.35,-36.60,-72.70,-37.10",
+        localZones: ["concepción", "concepcion", "talcahuano", "hualpén", "hualpen", "san pedro de la paz", "chiguayante", "coronel", "lota", "penco", "tomé", "tome", "hualqui", "biobío", "bio bio", "carriel sur"],
+        horariosOcupados: [],
+        datosBancarios: {
+            nombre: "DriverConce (Tu Nombre Completo)",
+            rut: "12.345.678-9",
+            banco: "BancoEstado",
+            tipoCuenta: "CuentaRUT / Vista",
+            numeroCuenta: "12345678",
+            correo: "pagos@driverconce.cl"
+        }
+    };
+
+    // Cargar datos del vehículo en pantalla
+    document.getElementById('vehicle-model-display').textContent = CONFIG.vehiculo.modelo;
+    document.getElementById('vehicle-color-display').textContent = CONFIG.vehiculo.color;
+    document.getElementById('vehicle-plate-display').textContent = CONFIG.vehiculo.patente;
+
+    let rawRouteData = null;
+    let originCoords = null;
+    let originMarker = null;
+    let destinations = [
+        { id: 1, address: "", coords: null, marker: null }
+    ];
+    let routeLine = null;
+    let currentTrip = null;
+    let currentRecommendedPickup = null;
+
+    function toLocalInputValue(date) {
+        const copy = new Date(date.getTime());
+        copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
+        return copy.toISOString().slice(0, 16);
+    }
+
+    function getMinimumValidPickupDate() {
+        const now = new Date();
+        let minPickup = new Date(now.getTime() + CONFIG.anticipacionMinimaMin * 60000);
+
+        const hour = minPickup.getHours();
+        const minutes = minPickup.getMinutes();
+
+        if (hour < CONFIG.horaInicioServicio) {
+            minPickup.setHours(CONFIG.horaInicioServicio, 0, 0, 0);
+        } else if (hour > CONFIG.horaFinServicio || (hour === CONFIG.horaFinServicio && minutes > 0)) {
+            minPickup.setDate(minPickup.getDate() + 1);
+            minPickup.setHours(CONFIG.horaInicioServicio, 0, 0, 0);
+        }
+
+        return minPickup;
+    }
+
+    function getMinimumSelectableDate(baseDurationMin) {
+        const mode = document.getElementById('time-mode').value;
+        const minPickup = getMinimumValidPickupDate();
+        const durationToUse = baseDurationMin || 0;
+
+        if (mode === 'arrive') {
+            return new Date(minPickup.getTime() + (durationToUse + CONFIG.colchonSeguridadMin) * 60000);
+        }
+        return minPickup;
+    }
+
+    function syncInputMinimums(baseDurationMin, autoCorrectValue) {
+        const input = document.getElementById('target-time');
+        const autoNote = document.getElementById('auto-adjust-note');
+        const minSelectableDate = getMinimumSelectableDate(baseDurationMin);
+
+        input.min = toLocalInputValue(minSelectableDate);
+
+        const currentVal = new Date(input.value);
+        const wasInvalid = !input.value || isNaN(currentVal.getTime()) || currentVal < minSelectableDate;
+
+        if (wasInvalid) {
+            const adjustedStr = toLocalInputValue(minSelectableDate);
+            input.value = adjustedStr;
+            if (autoCorrectValue && input.value) {
+                const mode = document.getElementById('time-mode').value;
+                autoNote.style.display = 'block';
+                autoNote.innerHTML = mode === 'arrive'
+                    ? "⚡ Hora de llegada ajustada automáticamente a las <strong>" + formatHour(minSelectableDate) + "</strong> (mínimo posible con " + CONFIG.anticipacionMinimaMin + " min de anticipación y traslado)."
+                    : "⚡ Hora de salida ajustada automáticamente a las <strong>" + formatHour(minSelectableDate) + "</strong> (" + CONFIG.anticipacionMinimaMin + " min de anticipación mínima).";
+            }
+        } else if (autoCorrectValue) {
+            autoNote.style.display = 'none';
+        }
+    }
+
+    function isRushHour(date) {
+        const day = date.getDay();
+        const isWeekday = day >= 1 && day <= 5;
+        if (!isWeekday) return false;
+
+        const totalMinutes = date.getHours() * 60 + date.getMinutes();
+        const morningStart = 7 * 60 + 30;
+        const morningEnd = 9 * 60 + 30;
+        const eveningStart = 17 * 60 + 30;
+        const eveningEnd = 19 * 60 + 30;
+
+        return (totalMinutes >= morningStart && totalMinutes <= morningEnd) ||
+               (totalMinutes >= eveningStart && totalMinutes <= eveningEnd);
+    }
+
+    function getBlockedSlots() {
+        const localBooked = JSON.parse(localStorage.getItem('driverconce_booked') || '[]');
+        return CONFIG.horariosOcupados.concat(localBooked);
+    }
+
+    const b = CONFIG.datosBancarios;
+    document.getElementById('bank-info-display').innerHTML =
+        "<strong>Nombre:</strong> " + b.nombre + "<br>" +
+        "<strong>RUT:</strong> " + b.rut + "<br>" +
+        "<strong>Banco:</strong> " + b.banco + " (" + b.tipoCuenta + ")<br>" +
+        "<strong>N° Cuenta:</strong> " + b.numeroCuenta + "<br>" +
+        "<strong>Correo:</strong> " + b.correo;
+
+    document.getElementById('btn-copy-bank').addEventListener('click', function () {
+        const textToCopy = b.nombre + "\n" + b.rut + "\n" + b.banco + "\n" + b.tipoCuenta + "\n" + b.numeroCuenta + "\n" + b.correo;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy);
+        }
+        const btn = document.getElementById('btn-copy-bank');
+        btn.textContent = "✅ ¡Datos copiados!";
+        setTimeout(function () { btn.textContent = "📋 Copiar datos de transferencia"; }, 2500);
+    });
+
+    const map = L.map('map').setView(CONFIG.centroMapa, CONFIG.zoomInicial);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+    syncInputMinimums(0, false);
+
+    function scoreLocalPriority(place) {
+        const text = (place.display_name || "").toLowerCase();
+        const isLocal = CONFIG.localZones.some(function (zone) {
+            return text.indexOf(zone) !== -1;
+        });
+        return isLocal ? 0 : 1;
+    }
+
+    function attachAutocomplete(inputEl, suggestionsEl, onSelectPlace) {
+        let timeout = null;
+
+        inputEl.addEventListener('input', function () {
+            clearTimeout(timeout);
+            const query = inputEl.value.trim();
+            if (query.length < 3) { suggestionsEl.style.display = 'none'; return; }
+
+            timeout = setTimeout(async function () {
+                const url = "https://nominatim.openstreetmap.org/search?format=json&countrycodes=cl&viewbox=" +
+                            encodeURIComponent(CONFIG.viewboxConce) + "&bounded=0&q=" +
+                            encodeURIComponent(query) + "&limit=7";
+                const res = await fetch(url);
+                const data = await res.json();
+
+                data.sort(function (a, b) {
+                    return scoreLocalPriority(a) - scoreLocalPriority(b);
+                });
+
+                suggestionsEl.innerHTML = '';
+                if (data.length > 0) {
+                    suggestionsEl.style.display = 'block';
+                    data.slice(0, 5).forEach(function (place) {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        const shortLabel = place.display_name.split(',').slice(0, 3).join(',');
+                        const isLocal = scoreLocalPriority(place) === 0;
+                        div.innerHTML = isLocal
+                            ? "📍 " + shortLabel + " <span style='color:#2563eb;font-size:0.75rem;font-weight:600;'>(Concepción/alrededores)</span>"
+                            : "🇨🇱 " + shortLabel;
+                        div.onclick = function () {
+                            inputEl.value = shortLabel;
+                            suggestionsEl.style.display = 'none';
+                            onSelectPlace(shortLabel, [parseFloat(place.lat), parseFloat(place.lon)]);
+                        };
+                        suggestionsEl.appendChild(div);
+                    });
+                } else {
+                    suggestionsEl.style.display = 'none';
+                }
+            }, 350);
+        });
+    }
+
+    attachAutocomplete(
+        document.getElementById('origin-input'),
+        document.getElementById('origin-suggestions'),
+        function (label, coords) {
+            setOrigin(coords);
+        }
+    );
+
+    function renderDestinations() {
+        const container = document.getElementById('destinations-container');
+        const addBtn = document.getElementById('btn-add-dest');
+        container.innerHTML = '';
+
+        destinations.forEach(function (dest, idx) {
+            const isLast = idx === destinations.length - 1;
+            const group = document.createElement('div');
+            group.className = 'form-group';
+
+            const label = document.createElement('label');
+            label.textContent = destinations.length === 1
+                ? "🏁 Destino"
+                : (isLast ? "🏁 Destino Final (" + (idx + 1) + ")" : "🛑 Parada " + (idx + 1));
+
+            const row = document.createElement('div');
+            row.className = 'input-with-btn';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = isLast ? "Ej: Aeropuerto Carriel Sur, Chillán..." : "Parada intermedia...";
+            input.autocomplete = 'off';
+            input.value = dest.address;
+            input.addEventListener('input', function () {
+                dest.address = input.value;
+            });
+
+            const suggestions = document.createElement('div');
+            suggestions.className = 'suggestions';
+
+            attachAutocomplete(input, suggestions, function (labelStr, coords) {
+                dest.address = labelStr;
+                setDestinationPoint(idx, coords);
+            });
+
+            row.appendChild(input);
+
+            if (destinations.length > 1) {
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn-remove-dest';
+                removeBtn.textContent = '✕';
+                removeBtn.title = 'Quitar destino';
+                removeBtn.onclick = function () {
+                    if (dest.marker) map.removeLayer(dest.marker);
+                    destinations.splice(idx, 1);
+                    renderDestinations();
+                    recalculateMultiRoute();
+                };
+                row.appendChild(removeBtn);
+            }
+
+            group.appendChild(label);
+            group.appendChild(row);
+            group.appendChild(suggestions);
+            container.appendChild(group);
+        });
+
+        if (destinations.length >= CONFIG.maxDestinos) {
+            addBtn.style.display = 'none';
+        } else {
+            addBtn.style.display = 'block';
+            addBtn.textContent = "➕ Agregar otro destino / parada (" + destinations.length + " de " + CONFIG.maxDestinos + ")";
+        }
+    }
+
+    document.getElementById('btn-add-dest').addEventListener('click', function () {
+        if (destinations.length >= CONFIG.maxDestinos) return;
+        destinations.push({ id: Date.now(), address: "", coords: null, marker: null });
+        renderDestinations();
+    });
+
+    renderDestinations();
+
+    document.getElementById('btn-gps').addEventListener('click', function () {
+        const btn = document.getElementById('btn-gps');
+        const errorBox = document.getElementById('error-box');
+        errorBox.style.display = 'none';
+
+        if (!navigator.geolocation) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "⚠️ Tu navegador no soporta GPS. Escribe tu dirección o toca el mapa.";
+            return;
+        }
+
+        btn.textContent = "⏳ Ubicando...";
+        btn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            async function (pos) {
+                const coords = [pos.coords.latitude, pos.coords.longitude];
+                setOrigin(coords);
+                map.setView(coords, 15);
+
+                try {
+                    const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + coords[0] + "&lon=" + coords[1]);
+                    const data = await res.json();
+                    const shortName = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : "Mi ubicación actual (GPS)";
+                    document.getElementById('origin-input').value = shortName;
+                } catch (e) {
+                    document.getElementById('origin-input').value = "Mi ubicación actual (GPS)";
+                }
+
+                btn.textContent = "✅ Ubicado";
+                btn.disabled = false;
+                setTimeout(function () { btn.textContent = "🎯 Mi GPS"; }, 2000);
+            },
+            function (err) {
+                btn.textContent = "🎯 Mi GPS";
+                btn.disabled = false;
+                errorBox.style.display = 'block';
+                if (err.code === 1) {
+                    errorBox.innerHTML = "🔒 <strong>Permiso de GPS bloqueado:</strong> Activa Ubicación en los ajustes de tu navegador o celular.";
+                } else {
+                    errorBox.innerHTML = "📡 No se pudo obtener el GPS. Escribe tu calle o toca el mapa.";
+                }
+            },
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        );
+    });
+
+    function setOrigin(coords) {
+        originCoords = coords;
+        if (originMarker) map.removeLayer(originMarker);
+        originMarker = L.marker(coords).addTo(map).bindPopup("Recogida").openPopup();
+        map.panTo(coords);
+        recalculateMultiRoute();
+    }
+
+    function setDestinationPoint(index, coords) {
+        const dest = destinations[index];
+        dest.coords = coords;
+        if (dest.marker) map.removeLayer(dest.marker);
+        dest.marker = L.marker(coords).addTo(map).bindPopup("Destino " + (index + 1)).openPopup();
+        map.panTo(coords);
+        recalculateMultiRoute();
+    }
+
+    map.on('click', async function (e) {
+        const coords = [e.latlng.lat, e.latlng.lng];
+        const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + coords[0] + "&lon=" + coords[1]);
+        const data = await res.json();
+        const shortName = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : coords[0].toFixed(4) + ", " + coords[1].toFixed(4);
+
+        if (!originCoords) {
+            document.getElementById('origin-input').value = shortName;
+            setOrigin(coords);
+            return;
+        }
+
+        // Buscar el primer destino sin coordenadas; si todos tienen, actualiza el último
+        let targetIdx = destinations.findIndex(function (d) { return !d.coords; });
+        if (targetIdx === -1) targetIdx = destinations.length - 1;
+
+        destinations[targetIdx].address = shortName;
+        renderDestinations();
+        setDestinationPoint(targetIdx, coords);
+    });
+
+    async function recalculateMultiRoute() {
+        const validDests = destinations.filter(function (d) { return d.coords !== null; });
+
+        if (!originCoords || validDests.length === 0) {
+            if (routeLine) map.removeLayer(routeLine);
+            document.getElementById('result-box').style.display = 'none';
+            document.getElementById('payment-box').style.display = 'none';
+            rawRouteData = null;
+            currentTrip = null;
+            return;
+        }
+
+        // Armar lista de puntos: origen -> destino 1 -> destino 2 -> ...
+        const waypoints = [originCoords].concat(validDests.map(function (d) { return d.coords; }));
+        const coordString = waypoints.map(function (pt) { return pt[1] + "," + pt[0]; }).join(";");
+
+        const url = "https://router.project-osrm.org/route/v1/driving/" + coordString + "?overview=full&geometries=geojson";
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const distKm = route.distance / 1000;
+            const baseDurationMin = Math.ceil(route.duration / 60);
+
+            if (routeLine) map.removeLayer(routeLine);
+            routeLine = L.geoJSON(route.geometry, { style: { color: '#2563eb', weight: 5 } }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [25, 25] });
+
+            rawRouteData = { distKm: distKm, baseDurationMin: baseDurationMin };
+            syncInputMinimums(baseDurationMin, true);
+            validateForm();
+        }
+    }
+
+    document.getElementById('time-mode').addEventListener('change', function (e) {
+        document.getElementById('time-label').textContent = e.target.value === 'arrive'
+            ? 'Hora a la que necesitas llegar al destino final:'
+            : 'Hora a la que deseas que te pasemos a buscar:';
+        syncInputMinimums(rawRouteData ? rawRouteData.baseDurationMin : 0, true);
+        validateForm();
+    });
+
+    document.getElementById('target-time').addEventListener('change', function () {
+        const baseMin = rawRouteData ? rawRouteData.baseDurationMin : 0;
+        syncInputMinimums(baseMin, true);
+        validateForm();
+    });
+
+    document.getElementById('client-name').addEventListener('input', validateForm);
+    document.getElementById('accept-policy').addEventListener('change', validateForm);
+
+    function formatHour(date) {
+        return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function validateForm() {
+        const errorBox = document.getElementById('error-box');
+        const recBox = document.getElementById('recommendation-box');
+        const payBox = document.getElementById('payment-box');
+        const trafficNote = document.getElementById('traffic-note');
+        const btnBook = document.getElementById('btn-book');
+        const policyAccepted = document.getElementById('accept-policy').checked;
+
+        errorBox.style.display = 'none';
+        recBox.style.display = 'none';
+        payBox.style.display = 'none';
+        trafficNote.style.display = 'none';
+        btnBook.disabled = true;
+
+        if (!rawRouteData) return;
+
+        syncInputMinimums(rawRouteData.baseDurationMin, true);
+
+        const mode = document.getElementById('time-mode').value;
+        const selectedTime = new Date(document.getElementById('target-time').value);
+        if (isNaN(selectedTime.getTime())) return;
+
+        const rush = isRushHour(selectedTime);
+        const adjustedDurationMin = rush
+            ? Math.ceil(rawRouteData.baseDurationMin * CONFIG.factorHoraPunta)
+            : rawRouteData.baseDurationMin;
+
+        const minSelectableWithRush = getMinimumSelectableDate(adjustedDurationMin);
+        let finalTargetTime = selectedTime;
+        if (mode === 'arrive' && selectedTime < minSelectableWithRush) {
+            finalTargetTime = minSelectableWithRush;
+            document.getElementById('target-time').value = toLocalInputValue(finalTargetTime);
+            document.getElementById('auto-adjust-note').style.display = 'block';
+            document.getElementById('auto-adjust-note').innerHTML = "⚡ Hora de llegada ajustada a las <strong>" + formatHour(finalTargetTime) + "</strong> considerando hora punta y " + CONFIG.anticipacionMinimaMin + " min de anticipación.";
+        }
+
+        let price = 0;
+        if (rawRouteData.distKm <= CONFIG.radioMinimoKm) {
+            price = CONFIG.tarifaMinima;
+        } else {
+            const calculated = (rawRouteData.distKm * CONFIG.valorKm) + (adjustedDurationMin * CONFIG.valorMinuto);
+            price = Math.max(CONFIG.tarifaMinima, Math.round(calculated / 100) * 100);
+        }
+
+        currentTrip = {
+            distKm: rawRouteData.distKm,
+            durationMin: adjustedDurationMin,
+            price: price,
+            rushApplied: rush
+        };
+
+        document.getElementById('res-dist').textContent = rawRouteData.distKm.toFixed(1) + " km";
+        document.getElementById('res-time').textContent = adjustedDurationMin + " min";
+        document.getElementById('res-price').textContent = "$" + price.toLocaleString('es-CL');
+        document.getElementById('pay-amount-text').textContent = "$" + price.toLocaleString('es-CL');
+        document.getElementById('result-box').style.display = 'block';
+
+        if (rush) {
+            trafficNote.style.display = 'block';
+            trafficNote.innerHTML = "🚦 Ajuste automático por hora punta aplicado (" + rawRouteData.baseDurationMin + " min base → " + adjustedDurationMin + " min est.)";
+        }
+
+        const minAllowedPickup = getMinimumValidPickupDate();
+        let recommendedPickupTime;
+
+        if (mode === 'arrive') {
+            const totalOffsetMin = adjustedDurationMin + CONFIG.colchonSeguridadMin;
+            recommendedPickupTime = new Date(finalTargetTime.getTime() - totalOffsetMin * 60000);
+            recBox.style.display = 'block';
+            recBox.innerHTML = "💡 <strong>Recomendación DriverConce:</strong> Como el recorrido total dura aprox. <strong>" + adjustedDurationMin + " min</strong>, te sugerimos salir a las <strong>" + formatHour(recommendedPickupTime) + "</strong> (incluye " + CONFIG.colchonSeguridadMin + " min de holgura).";
+        } else {
+            recommendedPickupTime = finalTargetTime;
+            const estimatedArrival = new Date(finalTargetTime.getTime() + adjustedDurationMin * 60000);
+            recBox.style.display = 'block';
+            recBox.innerHTML = "🕒 Saliendo a las <strong>" + formatHour(recommendedPickupTime) + "</strong>, llegarás al destino final aprox. a las <strong>" + formatHour(estimatedArrival) + "</strong>.";
+        }
+
+        if (recommendedPickupTime < minAllowedPickup) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "⚠️ La hora de recogida más próxima disponible es a las <strong>" + formatHour(minAllowedPickup) + "</strong> (" + CONFIG.anticipacionMinimaMin + " min de anticipación).";
+            return;
+        }
+
+        const pickupHour = recommendedPickupTime.getHours();
+        const pickupMinutes = recommendedPickupTime.getMinutes();
+        if (pickupHour < CONFIG.horaInicioServicio || pickupHour > CONFIG.horaFinServicio || (pickupHour === CONFIG.horaFinServicio && pickupMinutes > 0)) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "🌙 Nuestro horario de servicio es de <strong>07:00 AM a 21:00 PM</strong>. La hora calculada (" + formatHour(recommendedPickupTime) + ") está fuera de horario.";
+            return;
+        }
+
+        const blockedSlots = getBlockedSlots();
+        const isConflict = blockedSlots.some(function (slotStr) {
+            const bookedTime = new Date(slotStr.replace(' ', 'T'));
+            const diffMin = Math.abs(recommendedPickupTime - bookedTime) / 60000;
+            return diffMin < CONFIG.margenEntreViajesMin;
+        });
+
+        if (isConflict) {
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = "🚫 Ese horario (<strong>" + formatHour(recommendedPickupTime) + "</strong>) ya está reservado. Elige otro con al menos " + CONFIG.margenEntreViajesMin + " min de diferencia.";
+            return;
+        }
+
+        currentRecommendedPickup = recommendedPickupTime;
+        payBox.style.display = 'block';
+
+        if (policyAccepted) {
+            btnBook.disabled = false;
+            btnBook.dataset.pickup = recommendedPickupTime.toLocaleDateString('es-CL') + " a las " + formatHour(recommendedPickupTime);
+        }
+    }
+
+    document.getElementById('btn-book').addEventListener('click', function () {
+        const origin = document.getElementById('origin-input').value;
+        const name = document.getElementById('client-name').value.trim() || 'Cliente';
+        const pickup = document.getElementById('btn-book').dataset.pickup;
+
+        const validDests = destinations.filter(function (d) { return d.coords !== null || d.address.trim() !== ""; });
+        const destText = validDests.map(function (d, idx) {
+            return (validDests.length > 1 ? (idx + 1) + ". " : "") + (d.address || "Punto marcado en mapa");
+        }).join("\n   ");
+
+        if (currentRecommendedPickup) {
+            const localBooked = JSON.parse(localStorage.getItem('driverconce_booked') || '[]');
+            localBooked.push(currentRecommendedPickup.toISOString());
+            localStorage.setItem('driverconce_booked', JSON.stringify(localBooked));
+        }
+
+        const gpsLink = originCoords ? "https://maps.google.com/?q=" + originCoords[0] + "," + originCoords[1] : "";
+
+        const msg = "Hola *DriverConce* 👋, quiero confirmar mi reserva:\n\n" +
+                    "👤 *Nombre:* " + name + "\n" +
+                    "🚘 *Vehículo:* " + CONFIG.vehiculo.modelo + " (" + CONFIG.vehiculo.patente + ")\n" +
+                    "📍 *Recogida:* " + origin + "\n" +
+                    (gpsLink ? "🗺️ *Pin GPS:* " + gpsLink + "\n" : "") +
+                    "🏁 *Destino(s):*\n   " + destText + "\n" +
+                    "⏰ *Hora de salida:* " + pickup + "\n" +
+                    "📏 *Distancia / Tiempo total:* " + currentTrip.distKm.toFixed(1) + " km (" + currentTrip.durationMin + " min)\n" +
+                    "💰 *Total a pagar:* $" + currentTrip.price.toLocaleString('es-CL') + "\n" +
+                    "✅ *Condiciones:* Acepto la retención de $" + CONFIG.retencionCancelacion.toLocaleString('es-CL') + " por combustible en caso de cancelar.\n\n" +
+                    "📎 *Aquí adjunto mi comprobante de transferencia:*";
+
+        const whatsappUrl = "https://wa.me/" + CONFIG.whatsappNumber + "?text=" + encodeURIComponent(msg);
+        window.open(whatsappUrl, '_blank');
+    });
+</script>
+
+</body>
+</html>
